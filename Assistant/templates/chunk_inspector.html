@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediAssist — Chunk Inspector</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f6f7f9;
+  --surface:#ffffff;
+  --border:#e2e5ea;
+  --border-strong:#c8cdd6;
+  --text:#1a1d23;
+  --text-2:#4b5263;
+  --text-3:#8b92a0;
+  --teal:#1d9e75;
+  --teal-dk:#0f6e56;
+  --teal-lt:#e1f5ee;
+  --teal-mid:#9fe1cb;
+  --purple:#7f77dd;
+  --purple-lt:#eeedfe;
+  --amber:#ba7517;
+  --amber-lt:#faeeda;
+  --red:#e24b4a;
+  --red-lt:#fcebeb;
+  --radius:8px;
+  --radius-lg:14px;
+  --mono:'Cascadia Code','Fira Code','Consolas',monospace;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+
+/* ── Layout ── */
+.shell{display:grid;grid-template-rows:52px 1fr;height:100vh}
+.topbar{background:var(--teal-dk);display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid rgba(0,0,0,.15)}
+.topbar-logo{width:28px;height:28px;background:var(--teal);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px}
+.topbar-title{font-size:14px;font-weight:600;color:#fff}
+.topbar-badge{font-size:11px;background:rgba(255,255,255,.12);color:var(--teal-mid);padding:2px 8px;border-radius:99px;margin-left:2px}
+.topbar-link{margin-left:auto;font-size:12px;color:var(--teal-mid);text-decoration:none;opacity:.8}
+.topbar-link:hover{opacity:1}
+
+.body{display:grid;grid-template-columns:280px 1fr;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-header{padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+
+/* ── Rechunk controls ── */
+.rechunk-panel{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
+.rechunk-title{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.ctrl-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.ctrl-label{font-size:12px;color:var(--text-2);min-width:64px;flex-shrink:0}
+select,input[type=number]{flex:1;padding:4px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:12px;background:var(--surface);color:var(--text)}
+select:focus,input:focus{outline:none;border-color:var(--teal)}
+.rechunk-btn{width:100%;padding:6px;border:none;border-radius:6px;background:var(--teal);color:#fff;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .15s}
+.rechunk-btn:hover{background:var(--teal-dk)}
+.rechunk-btn:disabled{background:var(--border-strong);color:var(--text-3);cursor:not-allowed}
+
+/* ── Doc list ── */
+.doc-list{flex:1;overflow-y:auto;padding:8px}
+.doc-card{border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s}
+.doc-card:hover{background:var(--bg)}
+.doc-card.active{border-color:var(--teal);background:var(--teal-lt)}
+.doc-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.doc-meta{font-size:11px;color:var(--text-3);display:flex;gap:8px;flex-wrap:wrap}
+.status-pill{font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px}
+.s-ready{background:var(--teal-lt);color:var(--teal-dk)}
+.s-pending{background:var(--amber-lt);color:var(--amber)}
+.s-processing{background:var(--purple-lt);color:var(--purple)}
+.s-failed{background:var(--red-lt);color:var(--red)}
+.empty-state{padding:24px 14px;text-align:center;color:var(--text-3);font-size:13px}
+
+/* ── Main panel ── */
+.main{display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+
+/* ── Stats bar ── */
+.stats-bar{padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.stat-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;min-width:90px}
+.stat-label{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.stat-value{font-size:18px;font-weight:600;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text-3);margin-top:1px}
+.page-filter-wrap{margin-left:auto;display:flex;align-items:center;gap:6px}
+.page-filter-wrap label{font-size:12px;color:var(--text-2)}
+.page-filter-wrap input{width:64px;padding:4px 8px;border:1px solid var(--border-strong);border-radius:5px;font-size:12px}
+.filter-btn{padding:4px 10px;border:1px solid var(--border-strong);border-radius:5px;background:var(--surface);font-size:12px;cursor:pointer;color:var(--text-2)}
+.filter-btn:hover{background:var(--bg)}
+.filter-btn.active{background:var(--teal-lt);color:var(--teal-dk);border-color:var(--teal-mid)}
+
+/* ── Chunk grid ── */
+.chunk-panel{overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:0}
+.no-doc{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-3);gap:8px}
+.no-doc-icon{width:48px;height:48px;background:var(--bg);border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+
+/* ── Chunk row ── */
+.chunk-row{display:grid;grid-template-columns:52px 1fr 110px;gap:0;border-bottom:1px solid var(--border);transition:background .1s}
+.chunk-row:first-child{border-top:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0}
+.chunk-row:last-child{border-radius:0 0 var(--radius) var(--radius)}
+.chunk-row:hover{background:var(--bg);cursor:pointer}
+.chunk-row.expanded{background:var(--teal-lt)}
+.chunk-row.expanded .chunk-expand-btn{transform:rotate(90deg)}
+
+/* ── Index cell ── */
+.chunk-idx{display:flex;align-items:flex-start;justify-content:center;padding:12px 0 12px;font-size:11px;font-weight:600;color:var(--text-3);font-family:var(--mono);border-right:1px solid var(--border)}
+
+/* ── Content cell ── */
+.chunk-content{padding:12px 14px;min-width:0}
+.chunk-preview{font-size:13px;color:var(--text);line-height:1.55;word-break:break-word}
+.chunk-preview mark{background:var(--amber-lt);color:var(--amber);border-radius:2px;padding:0 2px}
+.chunk-full-text{display:none;margin-top:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--mono);line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text-2);max-height:300px;overflow-y:auto}
+.chunk-row.expanded .chunk-full-text{display:block}
+
+/* ── Metadata cell ── */
+.chunk-meta{padding:12px 12px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:5px;font-size:11px}
+.meta-item{display:flex;flex-direction:column;gap:1px}
+.meta-key{color:var(--text-3);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.meta-val{color:var(--text);font-family:var(--mono);font-size:11px}
+.embed-badge{font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;width:fit-content}
+.embed-yes{background:var(--teal-lt);color:var(--teal-dk)}
+.embed-no{background:var(--amber-lt);color:var(--amber)}
+.chunk-expand-btn{background:none;border:none;cursor:pointer;color:var(--text-3);transition:transform .2s;margin-top:2px;line-height:1;padding:0;font-size:13px}
+
+/* ── Token bar ── */
+.token-bar-wrap{margin-top:5px}
+.token-bar-bg{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.token-bar-fill{height:100%;background:var(--teal);border-radius:2px;transition:width .3s}
+
+/* ── Loading / error ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-banner{background:var(--red-lt);color:var(--red);border:1px solid #f09595;border-radius:var(--radius);padding:10px 14px;margin:12px 20px;font-size:13px}
+.success-banner{background:var(--teal-lt);color:var(--teal-dk);border:1px solid var(--teal-mid);border-radius:var(--radius);padding:10px 14px;margin:12px 20px;font-size:13px;display:none}
+.success-banner.visible{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-logo">M</div>
+    <span class="topbar-title">MediAssist</span>
+    <span class="topbar-badge">Chunk Inspector</span>
+    <a href="/" class="topbar-link">← Back to chat</a>
+  </header>
+
+  <div class="body">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Documents</div>
+      </div>
+
+      <!-- Re-chunk controls -->
+      <div class="rechunk-panel">
+        <div class="rechunk-title">Re-chunk settings</div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Strategy</span>
+          <select id="ctrl-strategy">
+            <option value="recursive">Recursive</option>
+            <option value="fixed">Fixed-size</option>
+            <option value="semantic">Semantic</option>
+          </select>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Chunk size</span>
+          <input type="number" id="ctrl-size" value="512" min="64" max="2048" step="64">
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">Overlap</span>
+          <input type="number" id="ctrl-overlap" value="64" min="0" max="256" step="16">
+        </div>
+        <button class="rechunk-btn" id="rechunk-btn" disabled>Run re-chunk</button>
+        <div class="success-banner" id="rechunk-success"></div>
+      </div>
+
+      <!-- Document list -->
+      <div class="doc-list" id="doc-list">
+        <div class="empty-state">
+          <div class="spinner"></div><br>Loading documents...
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main panel -->
+    <main class="main">
+
+      <!-- Stats bar -->
+      <div class="stats-bar" id="stats-bar" style="display:none">
+        <div class="stat-card">
+          <div class="stat-label">Chunks</div>
+          <div class="stat-value" id="stat-chunks">—</div>
+          <div class="stat-sub" id="stat-strategy">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pages</div>
+          <div class="stat-value" id="stat-pages">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg tokens</div>
+          <div class="stat-value" id="stat-avg">—</div>
+          <div class="stat-sub" id="stat-range">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total tokens</div>
+          <div class="stat-value" id="stat-total">—</div>
+        </div>
+        <div class="page-filter-wrap">
+          <label for="page-filter">Page</label>
+          <input type="number" id="page-filter" min="1" placeholder="all" style="width:60px">
+          <button class="filter-btn" id="filter-btn" onclick="applyPageFilter()">Filter</button>
+          <button class="filter-btn" onclick="clearPageFilter()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Chunk grid -->
+      <div class="chunk-panel" id="chunk-panel">
+        <div class="no-doc">
+          <div class="no-doc-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+            </svg>
+          </div>
+          <span>Select a document to inspect its chunks</span>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:8000/api/debug';
+
+let activeDocId  = null;
+let allChunks    = [];
+let maxTokens    = 1;
+
+// ── Boot ─────────────────────────────────────────────────────────
+async function boot() {
+  await loadDocs();
+}
+
+// ── Load document list ────────────────────────────────────────────
+async function loadDocs() {
+  const list = document.getElementById('doc-list');
+  try {
+    const res  = await fetch(`${API}/documents/`);
+    const data = await res.json();
+
+    if (!data.documents?.length) {
+      list.innerHTML = '<div class="empty-state">No documents found.<br>Upload a PDF first.</div>';
+      return;
+    }
+
+    list.innerHTML = data.documents.map(doc => `
+      <div class="doc-card ${doc.id === activeDocId ? 'active' : ''}"
+           onclick="selectDoc('${doc.id}')">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <div class="doc-name" style="flex:1" title="${esc(doc.title)}">${esc(doc.title)}</div>
+          <span class="status-pill s-${doc.status}">${doc.status}</span>
+        </div>
+        <div class="doc-meta">
+          <span>${doc.chunk_count} chunks</span>
+          <span>${doc.page_count} pages</span>
+          <span>${doc.chunk_strategy}</span>
+          <span>${doc.file_size_kb} KB</span>
+        </div>
+        ${doc.status === 'failed'
+          ? `<div style="font-size:11px;color:var(--red);margin-top:4px">${esc(doc.error_message)}</div>`
+          : ''}
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="empty-state" style="color:var(--red)">API unreachable.<br>Is Django running?</div>';
+  }
+}
+
+// ── Select document ────────────────────────────────────────────────
+async function selectDoc(docId) {
+  activeDocId = docId;
+  document.getElementById('rechunk-btn').disabled = false;
+  document.getElementById('rechunk-success').classList.remove('visible');
+
+  // Highlight active card
+  document.querySelectorAll('.doc-card').forEach(c => c.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  // Show loading
+  const panel = document.getElementById('chunk-panel');
+  panel.innerHTML = '<div class="no-doc"><div class="spinner"></div><span>Loading chunks...</span></div>';
+  document.getElementById('stats-bar').style.display = 'none';
+
+  await loadChunks(docId);
+}
+
+// ── Load chunks ────────────────────────────────────────────────────
+async function loadChunks(docId, pageFilter) {
+  const panel = document.getElementById('chunk-panel');
+  let url = `${API}/documents/${docId}/chunks/`;
+  if (pageFilter) url += `?page_filter=${pageFilter}`;
+
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.error) {
+      panel.innerHTML = `<div class="error-banner">${esc(data.error)}</div>`;
+      return;
+    }
+
+    allChunks = data.chunks;
+    maxTokens = data.token_stats.max || 1;
+
+    // Update strategy controls to match doc settings
+    document.getElementById('ctrl-strategy').value = data.document.chunk_strategy;
+    document.getElementById('ctrl-size').value     = data.document.chunk_size;
+    document.getElementById('ctrl-overlap').value  = data.document.chunk_overlap;
+
+    // Render stats bar
+    renderStats(data);
+
+    // Render chunk rows
+    renderChunks(data.chunks);
+
+  } catch(e) {
+    panel.innerHTML = `<div class="error-banner">Failed to load chunks: ${e.message}</div>`;
+  }
+}
+
+// ── Render stats ──────────────────────────────────────────────────
+function renderStats(data) {
+  const bar = document.getElementById('stats-bar');
+  bar.style.display = 'flex';
+
+  document.getElementById('stat-chunks').textContent   = data.total_chunks;
+  document.getElementById('stat-strategy').textContent = data.document.chunk_strategy;
+  document.getElementById('stat-pages').textContent    = data.document.page_count;
+  document.getElementById('stat-avg').textContent      = data.token_stats.avg;
+  document.getElementById('stat-range').textContent    = `${data.token_stats.min}–${data.token_stats.max}`;
+  document.getElementById('stat-total').textContent    = data.token_stats.total.toLocaleString();
+}
+
+// ── Render chunk rows ─────────────────────────────────────────────
+function renderChunks(chunks) {
+  const panel = document.getElementById('chunk-panel');
+
+  if (!chunks.length) {
+    panel.innerHTML = '<div class="no-doc"><span>No chunks found for this filter.</span></div>';
+    return;
+  }
+
+  panel.innerHTML = chunks.map((c, i) => {
+    const pct     = Math.round((c.token_count / maxTokens) * 100);
+    const pageStr = c.page_start === c.page_end
+      ? `p.${c.page_start}`
+      : `p.${c.page_start}–${c.page_end}`;
+
+    return `
+    <div class="chunk-row" id="crow-${c.chunk_index}" onclick="toggleChunk(${c.chunk_index})">
+
+      <div class="chunk-idx">
+        <div style="text-align:center">
+          <div>${c.chunk_index}</div>
+          <button class="chunk-expand-btn" title="Expand">▶</button>
+        </div>
+      </div>
+
+      <div class="chunk-content">
+        <div class="chunk-preview">${highlightText(esc(c.preview))}</div>
+        <div class="token-bar-wrap">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);margin-bottom:2px">
+            <span>${c.token_count} tokens</span>
+            <span>${pageStr}</span>
+          </div>
+          <div class="token-bar-bg">
+            <div class="token-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="chunk-full-text">${esc(c.text)}</div>
+      </div>
+
+      <div class="chunk-meta">
+        <div class="meta-item">
+          <span class="meta-key">Page</span>
+          <span class="meta-val">${pageStr}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-key">Tokens</span>
+          <span class="meta-val">${c.token_count}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-key">Chars</span>
+          <span class="meta-val">${c.char_start}–${c.char_end}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-key">Embedded</span>
+          <span class="embed-badge ${c.is_embedded ? 'embed-yes' : 'embed-no'}">
+            ${c.is_embedded ? 'Yes' : 'No'}
+          </span>
+        </div>
+      </div>
+
+    </div>`;
+  }).join('');
+}
+
+// ── Toggle chunk expand ───────────────────────────────────────────
+function toggleChunk(idx) {
+  const row = document.getElementById(`crow-${idx}`);
+  if (row) row.classList.toggle('expanded');
+}
+
+// ── Highlight medical keywords ────────────────────────────────────
+const MEDICAL_KW = [
+  'hypertension','diabetes','patient','dosage','mg','blood pressure',
+  'diagnosis','treatment','symptoms','clinical','medication','therapy',
+  'adverse','contraindication','efficacy','placebo','randomized',
+];
+function highlightText(text) {
+  let out = text;
+  for (const kw of MEDICAL_KW) {
+    const re = new RegExp(`\\b(${kw})\\b`, 'gi');
+    out = out.replace(re, '<mark>$1</mark>');
+  }
+  return out;
+}
+
+// ── Page filter ───────────────────────────────────────────────────
+function applyPageFilter() {
+  const v = document.getElementById('page-filter').value;
+  if (!activeDocId || !v) return;
+  document.getElementById('filter-btn').classList.add('active');
+  loadChunks(activeDocId, parseInt(v));
+}
+function clearPageFilter() {
+  document.getElementById('page-filter').value = '';
+  document.getElementById('filter-btn').classList.remove('active');
+  if (activeDocId) loadChunks(activeDocId);
+}
+
+// ── Re-chunk ──────────────────────────────────────────────────────
+document.getElementById('rechunk-btn').addEventListener('click', async () => {
+  if (!activeDocId) return;
+
+  const btn      = document.getElementById('rechunk-btn');
+  const success  = document.getElementById('rechunk-success');
+  const strategy = document.getElementById('ctrl-strategy').value;
+  const size     = parseInt(document.getElementById('ctrl-size').value);
+  const overlap  = parseInt(document.getElementById('ctrl-overlap').value);
+
+  btn.disabled     = true;
+  btn.textContent  = 'Processing...';
+  success.classList.remove('visible');
+
+  try {
+    const res  = await fetch(`${API}/documents/${activeDocId}/rechunk/`, {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({chunk_strategy: strategy, chunk_size: size, chunk_overlap: overlap}),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      success.textContent = `Done — ${data.summary}`;
+      success.classList.add('visible');
+      await loadDocs();
+      await loadChunks(activeDocId);
+    } else {
+      success.textContent = `Error: ${data.error}`;
+      success.style.background = 'var(--red-lt)';
+      success.style.color = 'var(--red)';
+      success.style.borderColor = '#f09595';
+      success.classList.add('visible');
+    }
+  } catch(e) {
+    alert('Re-chunk failed: ' + e.message);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Run re-chunk';
+  }
+});
+
+// ── Utility ───────────────────────────────────────────────────────
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+boot();
+</script>
+</body>
+</html>

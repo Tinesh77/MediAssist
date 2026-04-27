@@ -17,8 +17,14 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-
+from django.conf import settings
+from django.conf.urls.static import static
+from Assistant.api.views import index, chunk_inspector
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("Assistant.api.urls")),
-]
+    path("",           index,           name="home"),
+    path("inspector/", chunk_inspector, name="chunk-inspector"),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+

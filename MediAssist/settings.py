@@ -15,6 +15,13 @@ import os
 from dotenv import load_dotenv
 import dj_database_url
 
+# In your settings.py or settings_additions.py
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,10 +44,31 @@ DEBUG = os.getenv("DEBUG") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
-    ]
+    # Gap 3 fix: AllowAny by default for local development.
+    # This prevents DRF from returning 403 on unauthenticated requests.
+    # In production, change to ["rest_framework.permissions.IsAuthenticated"]
+    # and add proper JWT or session auth.
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+ 
+    # Gap 2 fix: remove SessionAuthentication from the default list.
+    # SessionAuthentication enforces Django's CSRF check on every POST,
+    # which causes 403 Forbidden when the browser doesn't send a CSRF token.
+    # For a local dev API called from plain HTML/JS this must be empty or
+    # set to BasicAuthentication only.
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+ 
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.MultiPartParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.JSONParser",
+    ],
 }
+ 
 
 
 # Application definition
@@ -73,15 +101,22 @@ MIDDLEWARE = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+MEDIA_URL  = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
 ROOT_URLCONF = 'MediAssist.urls'
 
+CHROMA_DB_PATH = os.environ.get("CHROMA_DB_PATH", "chroma_store/")
+
+CHROMA_COLLECTION_STRATEGY = os.environ.get("CHROMA_COLLECTION_STRATEGY", "per_document")
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

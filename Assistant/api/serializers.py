@@ -4,8 +4,13 @@ from ..models import Document
 
 
 MAX_FILE_SIZE_MB = 20
-ALLOWED_TYPES    = {"application/pdf"}
-ALLOWED_EXTS     = {".pdf"}
+
+# Gap 4 fix: browsers differ on what MIME type they send for PDFs.
+# Chrome sends "application/pdf", Firefox sometimes sends
+# "application/octet-stream", and some OS/browser combos send nothing.
+# We rely on the magic bytes check as the real validator — MIME type
+# is only a soft hint, so we allow any value and never hard-reject on it.
+ALLOWED_EXTS = {".pdf"}
 
 
 class DocumentUploadSerializer(serializers.ModelSerializer):
@@ -44,22 +49,19 @@ class DocumentUploadSerializer(serializers.ModelSerializer):
                 f"Unsupported file type '{ext}'. Only PDF files are accepted."
             )
 
-        # 2. MIME type check (read from content_type sent by browser)
-        content_type = getattr(file, "content_type", "")
-        if content_type and content_type not in ALLOWED_TYPES:
-            raise serializers.ValidationError(
-                f"Invalid MIME type '{content_type}'. Expected application/pdf."
-            )
-
-        # 3. Magic bytes check — first 4 bytes of a PDF are always %PDF
+        # 2. Magic bytes check — first 4 bytes of a valid PDF are always %PDF
+        #    This is the real validator — we skip MIME type entirely because
+        #    browsers send inconsistent values (application/pdf, application/
+        #    octet-stream, or empty string depending on OS/browser).
         header = file.read(4)
         file.seek(0)
         if header != b"%PDF":
             raise serializers.ValidationError(
-                "File content does not appear to be a valid PDF."
+                "File content does not appear to be a valid PDF. "
+                "Please ensure you are uploading an actual PDF document."
             )
 
-        # 4. Size check
+        # 3. Size check
         size_mb = file.size / (1024 * 1024)
         if size_mb > MAX_FILE_SIZE_MB:
             raise serializers.ValidationError(

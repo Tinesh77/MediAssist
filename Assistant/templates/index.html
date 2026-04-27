@@ -5,653 +5,614 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MediAssist — Healthcare RAG</title>
 <style>
-  /* ── Reset & Base ── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6f9;--surface:#fff;--surface-2:#f8f9fb;
+  --border:#e3e7ed;--border-s:#c9d0db;
+  --text:#1a1d23;--text-2:#4a5568;--text-3:#8a94a6;
+  --teal:#0f6e56;--teal-m:#1d9e75;--teal-l:#e6f7f2;--teal-b:#9fe1cb;
+  --red:#dc2626;--red-l:#fef2f2;--red-b:#fca5a5;
+  --amber:#b45309;--amber-l:#fffbeb;--amber-b:#fcd34d;
+  --purple:#5b21b6;--purple-l:#f5f3ff;
+  --blue:#1d4ed8;--blue-l:#eff6ff;
+  --r:8px;--rl:14px;--rxl:22px;
+  --f:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Cascadia Code','Fira Code','Courier New',monospace;
+  --sh:0 1px 3px rgba(0,0,0,.07);--sh-m:0 4px 12px rgba(0,0,0,.08);
+}
+html,body{height:100%;font-family:var(--f);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.shell{display:grid;grid-template-columns:300px 1fr;grid-template-rows:58px 1fr;height:100vh;overflow:hidden}
 
-  :root {
-    --teal-900: #0d3d36;
-    --teal-700: #0f6e56;
-    --teal-500: #1d9e75;
-    --teal-200: #9fe1cb;
-    --teal-50:  #e1f5ee;
-    --gray-900: #111827;
-    --gray-700: #374151;
-    --gray-500: #6b7280;
-    --gray-300: #d1d5db;
-    --gray-100: #f3f4f6;
-    --gray-50:  #f9fafb;
-    --white:    #ffffff;
-    --red-500:  #ef4444;
-    --red-50:   #fef2f2;
-    --amber-500: #f59e0b;
-    --amber-50:  #fffbeb;
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
-    --shadow-md: 0 4px 12px rgba(0,0,0,.10);
-    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --font-mono: 'Cascadia Code', 'Fira Code', monospace;
-  }
+/* topbar */
+.topbar{grid-column:1/-1;background:#0d2f29;display:flex;align-items:center;gap:14px;padding:0 22px;border-bottom:1px solid rgba(255,255,255,.06)}
+.brand{display:flex;align-items:center;gap:10px}
+.bmark{width:32px;height:32px;border-radius:9px;background:var(--teal-m);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px}
+.bname{font-size:15px;font-weight:600;color:#fff}
+.btag{font-size:10px;color:#6ee7b7;background:rgba(110,231,183,.12);border:1px solid rgba(110,231,183,.2);border-radius:4px;padding:1px 6px;margin-left:2px}
+.tc{flex:1;display:flex;justify-content:center}
+.mbadge{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:4px 12px;font-size:12px;color:rgba(255,255,255,.6)}
+.mdot{width:6px;height:6px;border-radius:50%;background:#6ee7b7;animation:pl 2s infinite}
+@keyframes pl{0%,100%{opacity:1}50%{opacity:.3}}
+.tr{display:flex;align-items:center;gap:8px}
+.apist{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.45)}
+.adot{width:6px;height:6px;border-radius:50%;background:#6ee7b7}
+.adot.err{background:#f87171}
+.tbtn{font-size:12px;color:rgba(255,255,255,.55);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 12px;cursor:pointer;transition:all .15s;text-decoration:none}
+.tbtn:hover{background:rgba(255,255,255,.12);color:#fff}
 
-  html, body { height: 100%; font-family: var(--font); background: var(--gray-50); color: var(--gray-900); }
+/* sidebar */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.stabs{display:flex;padding:0 8px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.stab{flex:1;padding:11px 0;text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-3);border-bottom:2px solid transparent;transition:all .15s}
+.stab:hover{color:var(--text-2)}
+.stab.on{color:var(--teal);border-bottom-color:var(--teal-m);background:var(--surface)}
+.spanel{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.spanel.on{display:flex}
+.sh2{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;flex-shrink:0}
+.slbl{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em}
+.nbtn{font-size:11px;font-weight:600;color:var(--teal);background:var(--teal-l);border:1px solid var(--teal-b);border-radius:5px;padding:3px 9px;cursor:pointer;transition:all .15s}
+.nbtn:hover{background:var(--teal-m);color:#fff}
+.slist{flex:1;overflow-y:auto;padding:4px 8px 12px;min-height:0}
+.slist::-webkit-scrollbar{width:4px}
+.slist::-webkit-scrollbar-thumb{background:var(--border-s);border-radius:99px}
+.empty{padding:28px 14px;text-align:center;font-size:12px;color:var(--text-3);line-height:1.6}
 
-  /* ── Layout ── */
-  .app { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 56px 1fr; height: 100vh; }
+/* upload */
+.uarea{padding:14px 14px 10px}
+.uzone{border:2px dashed var(--border-s);border-radius:var(--rl);padding:20px 14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface-2);position:relative}
+.uzone:hover,.uzone.over{border-color:var(--teal-m);background:var(--teal-l)}
+.uzone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.uico{width:38px;height:38px;margin:0 auto 10px;background:var(--teal-l);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.uico svg{width:18px;height:18px;stroke:var(--teal);stroke-width:2;fill:none}
+.utxt{font-size:13px;color:var(--text-2);font-weight:500}
+.uhint{font-size:11px;color:var(--text-3);margin-top:3px}
+.pbar-w{display:none;margin-top:10px}
+.pbar-w.on{display:block}
+.ptrack{height:4px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:5px}
+.pfill{height:100%;background:var(--teal-m);border-radius:99px;width:0;transition:width .25s}
+.ptxt{font-size:11px;color:var(--text-3)}
+.toast{display:none;margin-top:8px;padding:8px 11px;border-radius:var(--r);font-size:12px;line-height:1.5;border-left:3px solid}
+.toast.on{display:block}
+.toast.ok{background:var(--teal-l);color:var(--teal);border-color:var(--teal-m)}
+.toast.err{background:var(--red-l);color:var(--red);border-color:var(--red)}
+.toast.warn{background:var(--amber-l);color:var(--amber);border-color:var(--amber-b)}
 
-  /* ── Topbar ── */
-  .topbar {
-    grid-column: 1 / -1;
-    background: var(--teal-900);
-    display: flex; align-items: center; gap: 12px;
-    padding: 0 20px;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-  .logo-mark {
-    width: 30px; height: 30px; border-radius: 8px;
-    background: var(--teal-500);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 700; color: white;
-  }
-  .topbar-title { font-size: 15px; font-weight: 600; color: white; }
-  .topbar-sub   { font-size: 12px; color: var(--teal-200); margin-left: 2px; }
-  .topbar-status {
-    margin-left: auto; display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--teal-200);
-  }
-  .status-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--teal-200);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  .status-dot.error { background: var(--red-500); animation: none; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* sessions */
+.sitem{display:flex;align-items:flex-start;gap:9px;padding:9px 10px;border-radius:var(--r);cursor:pointer;transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+.sitem:hover{background:var(--surface-2);border-color:var(--border)}
+.sitem.on{background:var(--teal-l);border-color:var(--teal-b)}
+.sico{width:30px;height:30px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.sitem.on .sico{background:var(--teal-l);border-color:var(--teal-b)}
+.sico svg{width:14px;height:14px;stroke:var(--text-3);fill:none;stroke-width:2}
+.sitem.on .sico svg{stroke:var(--teal)}
+.sinf{flex:1;min-width:0}
+.stitle{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.smeta{font-size:11px;color:var(--text-3);margin-top:2px}
+.sdel{width:22px;height:22px;border:none;background:transparent;color:var(--text-3);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:0;transition:all .15s;flex-shrink:0;margin-top:4px;padding:0}
+.sitem:hover .sdel{opacity:1}
+.sdel:hover{background:var(--red-l);color:var(--red)}
+.sdel svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
 
-  /* ── Sidebar ── */
-  .sidebar {
-    background: var(--white);
-    border-right: 1px solid var(--gray-300);
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
-  .sidebar-section { padding: 16px; border-bottom: 1px solid var(--gray-100); }
-  .sidebar-label {
-    font-size: 11px; font-weight: 600; letter-spacing: .06em;
-    color: var(--gray-500); text-transform: uppercase; margin-bottom: 10px;
-  }
+/* doc library */
+.ditem{border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s;background:var(--surface)}
+.ditem:hover{border-color:var(--border-s);box-shadow:var(--sh)}
+.ditem.on{border-color:var(--teal-m);background:var(--teal-l);box-shadow:0 0 0 3px rgba(29,158,117,.08)}
+.dtop{display:flex;align-items:flex-start;gap:8px}
+.dico{width:32px;height:32px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dico svg{width:15px;height:15px;stroke:var(--text-3);fill:none;stroke-width:1.5}
+.ditem.on .dico{background:var(--teal-l);border-color:var(--teal-b)}
+.ditem.on .dico svg{stroke:var(--teal)}
+.dinf{flex:1;min-width:0}
+.dname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.dmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dmt{font-size:11px;color:var(--text-3)}
+.dact{display:flex;align-items:center;gap:4px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.ditem:hover .dact{opacity:1}
+.ddel{width:26px;height:26px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+.ddel:hover{background:var(--red-l);border-color:var(--red-b)}
+.ddel svg{width:13px;height:13px;stroke:var(--text-3);fill:none;stroke-width:2;transition:stroke .15s}
+.ddel:hover svg{stroke:var(--red)}
+.pill{font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px}
+.p-ready{background:var(--teal-l);color:var(--teal)}
+.p-processing,.p-pending{background:var(--purple-l);color:var(--purple)}
+.p-failed{background:var(--red-l);color:var(--red)}
+.dprog{height:2px;background:var(--border);border-radius:99px;margin-top:6px;overflow:hidden;display:none}
+.dprog.on{display:block}
+.dpfill{height:100%;background:var(--teal-m);border-radius:99px;animation:ind 1.5s ease-in-out infinite}
+@keyframes ind{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
 
-  /* ── Upload zone ── */
-  .upload-zone {
-    border: 2px dashed var(--gray-300);
-    border-radius: var(--radius-md);
-    padding: 20px 14px;
-    text-align: center;
-    cursor: pointer;
-    transition: all .2s;
-    background: var(--gray-50);
-  }
-  .upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--teal-500);
-    background: var(--teal-50);
-  }
-  .upload-icon {
-    width: 36px; height: 36px; margin: 0 auto 8px;
-    background: var(--teal-50); border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .upload-icon svg { width: 18px; height: 18px; color: var(--teal-700); }
-  .upload-zone p   { font-size: 13px; color: var(--gray-600); line-height: 1.5; }
-  .upload-zone p strong { color: var(--teal-700); }
-  .upload-zone .hint { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
-  #file-input { display: none; }
+/* chat panel */
+.cpanel{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.cheader{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:54px}
+.chdoc{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.chdico{width:28px;height:28px;border-radius:7px;background:var(--teal-l);border:1px solid var(--teal-b);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chdico svg{width:13px;height:13px;stroke:var(--teal);fill:none;stroke-width:2}
+.chdname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chdmeta{font-size:11px;color:var(--text-3);white-space:nowrap}
+.chph{font-size:13px;color:var(--text-3);font-style:italic}
+.clrbtn{font-size:11px;color:var(--text-3);background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.clrbtn:hover{border-color:var(--border-s);color:var(--text-2)}
 
-  /* ── Upload progress ── */
-  .upload-progress { display: none; margin-top: 10px; }
-  .upload-progress.visible { display: block; }
-  .progress-bar-wrap {
-    height: 5px; background: var(--gray-100);
-    border-radius: 99px; overflow: hidden; margin-bottom: 6px;
-  }
-  .progress-bar {
-    height: 100%; background: var(--teal-500);
-    border-radius: 99px; width: 0;
-    transition: width .3s ease;
-  }
-  .progress-label { font-size: 11px; color: var(--gray-500); }
+/* messages */
+.msgs{flex:1;overflow-y:auto;padding:24px 22px;display:flex;flex-direction:column;gap:18px}
+.msgs::-webkit-scrollbar{width:5px}
+.msgs::-webkit-scrollbar-thumb{background:var(--border-s);border-radius:99px}
 
-  /* ── Toast / Validation message ── */
-  .toast {
-    display: none; margin-top: 8px; padding: 8px 10px;
-    border-radius: var(--radius-sm); font-size: 12px;
-    line-height: 1.5;
-  }
-  .toast.visible { display: block; }
-  .toast.error   { background: var(--red-50);   color: #b91c1c; border: 1px solid #fca5a5; }
-  .toast.success { background: var(--teal-50);  color: var(--teal-700); border: 1px solid var(--teal-200); }
-  .toast.warn    { background: var(--amber-50); color: #92400e; border: 1px solid #fcd34d; }
+/* welcome */
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:40px}
+.wico{width:56px;height:56px;border-radius:16px;background:var(--teal-l);border:1px solid var(--teal-b);margin-bottom:4px;display:flex;align-items:center;justify-content:center}
+.wico svg{width:26px;height:26px;stroke:var(--teal-m);fill:none;stroke-width:1.5}
+.wtitle{font-size:18px;font-weight:600;color:var(--text);letter-spacing:-.3px}
+.wsub{font-size:13px;color:var(--text-3);max-width:360px;line-height:1.7}
+.wsteps{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;justify-content:center}
+.wstep{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:9px;box-shadow:var(--sh)}
+.sn{width:22px;height:22px;border-radius:50%;background:var(--teal-l);border:1px solid var(--teal-b);color:var(--teal);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
-  /* ── Document list ── */
-  .doc-list { flex: 1; overflow-y: auto; padding: 8px; }
-  .doc-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px; border-radius: var(--radius-sm);
-    cursor: pointer; transition: background .15s;
-  }
-  .doc-item:hover { background: var(--gray-50); }
-  .doc-item.active { background: var(--teal-50); }
-  .doc-icon {
-    width: 28px; height: 28px; flex-shrink: 0;
-    background: var(--teal-50); border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .doc-icon svg { width: 14px; height: 14px; color: var(--teal-700); }
-  .doc-info { flex: 1; min-width: 0; }
-  .doc-name  { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-meta  { font-size: 11px; color: var(--gray-500); margin-top: 1px; }
-  .doc-badge {
-    font-size: 10px; font-weight: 600; padding: 2px 6px;
-    border-radius: 99px; flex-shrink: 0;
-  }
-  .badge-ready   { background: var(--teal-50);  color: var(--teal-700); }
-  .badge-pending { background: var(--amber-50); color: #92400e; }
-  .badge-failed  { background: var(--red-50);   color: #b91c1c; }
-  .empty-docs {
-    padding: 20px 14px; text-align: center;
-    font-size: 13px; color: var(--gray-400);
-  }
+/* message bubbles */
+.msg{display:flex;gap:10px;max-width:800px;width:100%}
+.msg.user{flex-direction:row-reverse;align-self:flex-end}
+.msg.assistant{align-self:flex-start}
+.mav{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.msg.user .mav{background:var(--teal);color:#fff}
+.msg.assistant .mav{background:var(--teal-l);color:var(--teal);border:1px solid var(--teal-b)}
+.mbody{max-width:calc(100% - 44px);display:flex;flex-direction:column;gap:6px}
+.mbub{padding:12px 16px;border-radius:var(--rl);font-size:14px;line-height:1.7;word-break:break-word}
+.msg.user .mbub{background:var(--teal);color:#fff;border-bottom-right-radius:4px;box-shadow:var(--sh)}
+.msg.assistant .mbub{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;box-shadow:var(--sh)}
+.src-tag{display:inline-flex;align-items:center;font-size:10px;font-weight:700;background:var(--teal-l);color:var(--teal);border:1px solid var(--teal-b);border-radius:4px;padding:0 5px;margin:0 1px;cursor:pointer;transition:all .15s;user-select:none;line-height:1.8;vertical-align:baseline}
+.src-tag:hover,.src-tag.lit{background:var(--teal);color:#fff;border-color:var(--teal)}
+.cur{display:inline-block;width:2px;height:.9em;background:var(--teal-m);margin-left:2px;vertical-align:text-bottom;animation:bk .6s ease-in-out infinite}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:0}}
 
-  /* ── Chat panel ── */
-  .chat-panel { display: flex; flex-direction: column; background: var(--gray-50); }
+/* citations */
+.cits{margin-top:4px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);overflow:hidden;box-shadow:var(--sh)}
+.chead{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;background:var(--surface-2)}
+.clbl{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex:1}
+.ccnt{font-size:11px;color:var(--teal);font-weight:600;background:var(--teal-l);border:1px solid var(--teal-b);border-radius:99px;padding:0 7px}
+.crow{border-bottom:1px solid var(--border)}
+.crow:last-child{border-bottom:none}
+.cchip{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;transition:background .12s;user-select:none}
+.cchip:hover{background:var(--surface-2)}
+.cchip.open{background:var(--teal-l)}
+.cn{width:20px;height:20px;border-radius:5px;background:var(--teal-l);border:1px solid var(--teal-b);color:var(--teal);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cchip.unc .cn{background:var(--surface-2);border-color:var(--border);color:var(--text-3)}
+.cdoc{font-size:12px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cchip.unc .cdoc{color:var(--text-3)}
+.cpg{font-size:11px;color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.cscore{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px}
+.sh{background:var(--teal-l);color:var(--teal);border:1px solid var(--teal-b)}
+.sm{background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b)}
+.sl{background:var(--surface-2);color:var(--text-3);border:1px solid var(--border)}
+.cchev{font-size:10px;color:var(--text-3);transition:transform .2s;flex-shrink:0}
+.cchip.open .cchev{transform:rotate(90deg)}
+.citedbadge{font-size:9px;font-weight:700;color:var(--teal);background:var(--teal-l);border:1px solid var(--teal-b);border-radius:3px;padding:0 4px;flex-shrink:0}
+.cdetail{display:none;padding:10px 12px 12px;background:var(--surface-2);border-top:1px solid var(--border)}
+.cdetail.on{display:block}
+.cdmeta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.cdtitle{font-size:12px;font-weight:600;color:var(--text)}
+.cdpg{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--blue);border:1px solid #bfdbfe;background:var(--blue-l);border-radius:4px;padding:1px 7px;cursor:pointer;transition:all .15s}
+.cdpg:hover{background:#dbeafe}
+.cdpg svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2}
+.cdtext{font-size:12px;color:var(--text-2);line-height:1.65;font-family:var(--mono);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;max-height:130px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.cdsc{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.cdsi{font-size:11px;color:var(--text-3)}
+.cdsi span{font-weight:600;color:var(--text-2)}
 
-  .chat-messages {
-    flex: 1; overflow-y: auto;
-    padding: 24px 28px;
-    display: flex; flex-direction: column; gap: 20px;
-  }
+/* typing */
+.typing{padding:0 22px 6px;display:none;align-items:center;gap:8px}
+.typing.on{display:flex}
+.tdots{display:flex;gap:4px}
+.tdots i{width:7px;height:7px;border-radius:50%;background:var(--teal-b);display:block;animation:td .9s ease-in-out infinite}
+.tdots i:nth-child(2){animation-delay:.15s}
+.tdots i:nth-child(3){animation-delay:.3s}
+@keyframes td{0%,100%{transform:translateY(0);background:var(--teal-b)}50%{transform:translateY(-5px);background:var(--teal-m)}}
+.tlbl{font-size:12px;color:var(--text-3)}
 
-  /* ── Welcome screen ── */
-  .welcome {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 10px; text-align: center; color: var(--gray-400);
-    padding: 40px;
-  }
-  .welcome-icon {
-    width: 56px; height: 56px; border-radius: 16px;
-    background: var(--teal-50); margin-bottom: 4px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .welcome-icon svg { width: 28px; height: 28px; color: var(--teal-500); }
-  .welcome h2 { font-size: 17px; font-weight: 600; color: var(--gray-700); }
-  .welcome p  { font-size: 14px; max-width: 340px; line-height: 1.6; }
-  .welcome-steps {
-    display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; justify-content: center;
-  }
-  .welcome-step {
-    background: var(--white); border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md); padding: 12px 16px;
-    font-size: 13px; color: var(--gray-600);
-    display: flex; align-items: center; gap: 8px; max-width: 180px; text-align: left;
-  }
-  .step-num {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: var(--teal-50); color: var(--teal-700);
-    font-size: 11px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
+/* input */
+.ibar{padding:14px 20px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.irow{display:flex;gap:8px;align-items:flex-end;background:var(--surface-2);border:1.5px solid var(--border-s);border-radius:var(--rxl);padding:8px 8px 8px 16px;transition:border-color .2s,box-shadow .2s}
+.irow:focus-within{border-color:var(--teal-m);box-shadow:0 0 0 3px rgba(29,158,117,.08)}
+textarea#q{flex:1;border:none;background:transparent;font-family:var(--f);font-size:14px;color:var(--text);resize:none;outline:none;line-height:1.5;max-height:130px;overflow-y:auto;padding-top:2px}
+textarea#q::placeholder{color:var(--text-3)}
+textarea#q:disabled{cursor:not-allowed}
+.sbtn{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:var(--teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;box-shadow:var(--sh)}
+.sbtn:hover{background:var(--teal-m);transform:scale(1.04)}
+.sbtn:active{transform:scale(.97)}
+.sbtn:disabled{background:var(--border);box-shadow:none;cursor:not-allowed;transform:none}
+.sbtn svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5}
+.ifooter{display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 4px}
+.slive{display:none;align-items:center;gap:4px;font-size:11px;color:var(--teal)}
+.slive.on{display:flex}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--teal-m);animation:pl 1s infinite}
+.ihint{font-size:11px;color:var(--text-3)}
 
-  /* ── Message bubbles ── */
-  .message { display: flex; gap: 10px; max-width: 760px; width: 100%; }
-  .message.user  { flex-direction: row-reverse; align-self: flex-end; }
-  .message.assistant { align-self: flex-start; }
-
-  .msg-avatar {
-    width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700;
-  }
-  .message.user      .msg-avatar { background: var(--teal-700); color: white; }
-  .message.assistant .msg-avatar { background: var(--teal-50);  color: var(--teal-700); border: 1px solid var(--teal-200); }
-
-  .msg-bubble {
-    padding: 12px 16px; border-radius: var(--radius-lg);
-    font-size: 14px; line-height: 1.65; max-width: calc(100% - 44px);
-  }
-  .message.user      .msg-bubble { background: var(--teal-700); color: white; border-bottom-right-radius: 4px; }
-  .message.assistant .msg-bubble { background: var(--white); color: var(--gray-900); border: 1px solid var(--gray-200); border-bottom-left-radius: 4px; box-shadow: var(--shadow-sm); }
-
-  .msg-sources {
-    display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px;
-    padding-top: 10px; border-top: 1px solid var(--gray-100);
-  }
-  .source-chip {
-    font-size: 11px; background: var(--teal-50);
-    color: var(--teal-700); border: 1px solid var(--teal-200);
-    border-radius: 4px; padding: 2px 7px; cursor: pointer;
-  }
-  .source-chip:hover { background: var(--teal-200); }
-
-  /* ── Typing indicator ── */
-  .typing { display: none; align-items: center; gap: 10px; padding: 0 0 4px; }
-  .typing.visible { display: flex; }
-  .typing-dots { display: flex; gap: 4px; }
-  .typing-dots span {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--teal-300, #5DCAA5);
-    animation: bounce .9s ease-in-out infinite;
-  }
-  .typing-dots span:nth-child(2) { animation-delay: .15s; }
-  .typing-dots span:nth-child(3) { animation-delay: .30s; }
-  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-
-  /* ── Chat input bar ── */
-  .chat-input-bar {
-    padding: 14px 20px;
-    border-top: 1px solid var(--gray-200);
-    background: var(--white);
-  }
-  .input-wrap {
-    display: flex; gap: 8px; align-items: flex-end;
-    background: var(--gray-50);
-    border: 1.5px solid var(--gray-300);
-    border-radius: var(--radius-xl);
-    padding: 8px 8px 8px 16px;
-    transition: border-color .2s;
-  }
-  .input-wrap:focus-within { border-color: var(--teal-500); }
-  #chat-input {
-    flex: 1; border: none; background: transparent;
-    font-family: var(--font); font-size: 14px; color: var(--gray-900);
-    resize: none; outline: none; line-height: 1.5;
-    max-height: 120px; overflow-y: auto;
-  }
-  #chat-input::placeholder { color: var(--gray-400); }
-  .send-btn {
-    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-    background: var(--teal-700); border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .15s, transform .1s;
-  }
-  .send-btn:hover   { background: var(--teal-900); }
-  .send-btn:active  { transform: scale(.95); }
-  .send-btn:disabled { background: var(--gray-300); cursor: not-allowed; }
-  .send-btn svg { width: 16px; height: 16px; color: white; }
-  .input-hint { font-size: 11px; color: var(--gray-400); margin-top: 6px; text-align: center; }
+/* confirm */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:center;justify-content:center}
+.overlay.on{display:flex}
+.cbox{background:var(--surface);border-radius:var(--rl);padding:24px 28px;max-width:360px;width:90%;box-shadow:var(--sh-m)}
+.ctitle{font-size:16px;font-weight:600;margin-bottom:8px}
+.cbody{font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px}
+.cbtns{display:flex;gap:8px;justify-content:flex-end}
+.bcancel{padding:7px 16px;border:1px solid var(--border-s);border-radius:var(--r);background:var(--surface);color:var(--text-2);font-size:13px;cursor:pointer}
+.bcancel:hover{background:var(--surface-2)}
+.bdanger{padding:7px 16px;border:1px solid var(--red-b);border-radius:var(--r);background:var(--red-l);color:var(--red);font-size:13px;font-weight:600;cursor:pointer}
+.bdanger:hover{background:var(--red);color:#fff}
 </style>
 </head>
 <body>
 
-<div class="app">
-
-  <!-- Topbar -->
-  <header class="topbar">
-    <div class="logo-mark">M</div>
-    <div>
-      <div class="topbar-title">MediAssist</div>
-      <div class="topbar-sub">Healthcare RAG Assistant</div>
+<div class="overlay" id="ov">
+  <div class="cbox">
+    <div class="ctitle" id="ct"></div>
+    <div class="cbody" id="cb"></div>
+    <div class="cbtns">
+      <button class="bcancel" onclick="closeOv()">Cancel</button>
+      <button class="bdanger" id="cok">Delete</button>
     </div>
-    <div class="topbar-status">
-      <div class="status-dot" id="status-dot"></div>
-      <span id="status-label">Connecting...</span>
+  </div>
+</div>
+
+<div class="shell">
+
+<header class="topbar">
+  <div class="brand">
+    <div class="bmark">M</div>
+    <span class="bname">MediAssist</span>
+    <span class="btag">Your medical documents, finally understood.</span>
+  </div>
+  <div class="tc">
+    <div class="mbadge"><div class="mdot"></div>Your Own Medical Assistant</div>
+  </div>
+  <div class="tr">
+    <div class="apist"><div class="adot" id="adot"></div><span id="albl">Connecting...</span></div>
+    <a href="/inspector/" class="tbtn">Inspector ↗</a>
+  </div>
+</header>
+
+<aside class="sidebar">
+  <div class="stabs">
+    <div class="stab on" id="st-chat" onclick="switchTab('chat')">Conversations</div>
+    <div class="stab" id="st-docs" onclick="switchTab('docs')">Library</div>
+  </div>
+
+  <div class="spanel on" id="sp-chat">
+    <div class="sh2">
+      <span class="slbl">Recent</span>
+      <button class="nbtn" onclick="newConv()">+ New</button>
     </div>
-  </header>
+    <div class="slist" id="slist"><div class="empty">No conversations yet.<br>Select a document and ask a question.</div></div>
+  </div>
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-
-    <!-- Upload section -->
-    <div class="sidebar-section">
-      <div class="sidebar-label">Upload Document</div>
-
-      <div class="upload-zone" id="upload-zone">
-        <div class="upload-icon">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-          </svg>
-        </div>
-        <p><strong>Click to upload</strong> or drag & drop</p>
-        <p class="hint">PDF only &middot; Max 20 MB</p>
+  <div class="spanel" id="sp-docs">
+    <div class="uarea">
+      <div class="uzone" id="uz">
+        <input type="file" id="fi" accept=".pdf,application/pdf">
+        <div class="uico"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6h.1a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg></div>
+        <div class="utxt">Click or drag & drop a PDF</div>
+        <div class="uhint">Max 20 MB · Medical documents only</div>
       </div>
-      <input type="file" id="file-input" accept=".pdf,application/pdf">
+      <div class="pbar-w" id="pw"><div class="ptrack"><div class="pfill" id="pf"></div></div><div class="ptxt" id="ptxt">Uploading...</div></div>
+      <div class="toast" id="utst"></div>
+    </div>
+    <div class="sh2"><span class="slbl">Documents</span><span class="slbl" id="dcnt" style="font-weight:400"></span></div>
+    <div class="slist" id="dlist"><div class="empty">No documents yet. Upload above.</div></div>
+  </div>
+</aside>
 
-      <div class="upload-progress" id="upload-progress">
-        <div class="progress-bar-wrap">
-          <div class="progress-bar" id="progress-bar"></div>
-        </div>
-        <div class="progress-label" id="progress-label">Uploading...</div>
+<main class="cpanel">
+  <div class="cheader" id="chdr">
+    <div class="chdoc" id="chinfo"><div class="chph">Select a document from Library to start</div></div>
+    <button class="clrbtn" id="clrbtn" onclick="clearChat()" style="display:none">Clear chat</button>
+  </div>
+
+  <div class="msgs" id="msgs">
+    <div class="welcome" id="wlc">
+      <div class="wico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>
+      <div class="wtitle">Ask anything about your medical documents</div>
+      <div class="wsub">Upload a PDF in Library, select it, then ask questions. Every answer is grounded with cited sources linked back to the exact page.</div>
+      <div class="wsteps">
+        <div class="wstep"><div class="sn">1</div>Upload PDF in Library</div>
+        <div class="wstep"><div class="sn">2</div>Select document</div>
+        <div class="wstep"><div class="sn">3</div>Ask a question</div>
       </div>
-
-      <div class="toast" id="upload-toast"></div>
     </div>
+  </div>
 
-    <!-- Document list -->
-    <div class="sidebar-label" style="padding:12px 16px 0">My Documents</div>
-    <div class="doc-list" id="doc-list">
-      <div class="empty-docs">No documents yet.<br>Upload a PDF to get started.</div>
+  <div class="typing" id="typ"><div class="tdots"><i></i><i></i><i></i></div><span class="tlbl" id="tlbl">Retrieving chunks...</span></div>
+
+  <div class="ibar">
+    <div class="irow">
+      <textarea id="q" rows="1" placeholder="Select a document from Library first..." disabled></textarea>
+      <button class="sbtn" id="sbtn" disabled onclick="send()">
+        <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+      </button>
     </div>
-
-  </aside>
-
-  <!-- Chat panel -->
-  <main class="chat-panel">
-    <div class="chat-messages" id="chat-messages">
-
-      <!-- Welcome screen (hidden once chatting) -->
-      <div class="welcome" id="welcome-screen">
-        <div class="welcome-icon">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-          </svg>
-        </div>
-        <h2>Ask anything about your medical documents</h2>
-        <p>Upload a PDF (research paper, drug guide, clinical notes) and ask questions. Answers are grounded in your documents with source citations.</p>
-        <div class="welcome-steps">
-          <div class="welcome-step"><div class="step-num">1</div>Upload a medical PDF</div>
-          <div class="welcome-step"><div class="step-num">2</div>Ask a question below</div>
-          <div class="welcome-step"><div class="step-num">3</div>Get cited answers</div>
-        </div>
-      </div>
-
+    <div class="ifooter">
+      <div class="slive" id="slive"><div class="ldot"></div>Streaming live...</div>
+      <div class="ihint">Enter to send · Shift+Enter for newline</div>
     </div>
-
-    <!-- Typing indicator -->
-    <div class="typing" id="typing-indicator" style="padding:0 28px 4px">
-      <div class="typing-dots">
-        <span></span><span></span><span></span>
-      </div>
-      <span style="font-size:12px;color:var(--gray-400)">MediAssist is thinking...</span>
-    </div>
-
-    <!-- Input bar -->
-    <div class="chat-input-bar">
-      <div class="input-wrap">
-        <textarea
-          id="chat-input"
-          rows="1"
-          placeholder="Ask a question about your medical documents..."
-          disabled
-        ></textarea>
-        <button class="send-btn" id="send-btn" disabled>
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
-          </svg>
-        </button>
-      </div>
-      <div class="input-hint">Upload a document first &middot; Press Enter to send</div>
-    </div>
-
-  </main>
+  </div>
+</main>
 </div>
 
 <script>
-// ── Config ──────────────────────────────────────────────────────
-const API_BASE = "http://127.0.0.1:8000/api";
+const API='http://127.0.0.1:8000/api';
+const $=id=>document.getElementById(id);
+let docId=null,docTitle='',docChunks=0,sessId=null,busy=false,docs=[],sessions=[],pollT=null;
 
-// ── State ───────────────────────────────────────────────────────
-let documents       = [];
-let activeDocId     = null;
-let isWaiting       = false;
+(async()=>{ await Promise.all([ping(),loadDocs(),loadSessions()]); })();
 
-// ── DOM refs ────────────────────────────────────────────────────
-const uploadZone     = document.getElementById("upload-zone");
-const fileInput      = document.getElementById("file-input");
-const progressWrap   = document.getElementById("upload-progress");
-const progressBar    = document.getElementById("progress-bar");
-const progressLabel  = document.getElementById("progress-label");
-const uploadToast    = document.getElementById("upload-toast");
-const docList        = document.getElementById("doc-list");
-const chatMessages   = document.getElementById("chat-messages");
-const chatInput      = document.getElementById("chat-input");
-const sendBtn        = document.getElementById("send-btn");
-const typingEl       = document.getElementById("typing-indicator");
-const welcomeScreen  = document.getElementById("welcome-screen");
-const statusDot      = document.getElementById("status-dot");
-const statusLabel    = document.getElementById("status-label");
-
-// ── Health check ─────────────────────────────────────────────────
-async function checkHealth() {
-  try {
-    const res = await fetch(`${API_BASE}/documents/`);
-    if (res.ok) {
-      statusDot.classList.remove("error");
-      statusLabel.textContent = "Connected";
-    } else { throw new Error(); }
-  } catch {
-    statusDot.classList.add("error");
-    statusLabel.textContent = "API offline";
-  }
-}
-checkHealth();
-
-// ── Upload: drag & drop ───────────────────────────────────────────
-uploadZone.addEventListener("click",      () => fileInput.click());
-uploadZone.addEventListener("dragover",   e => { e.preventDefault(); uploadZone.classList.add("drag-over"); });
-uploadZone.addEventListener("dragleave",  () => uploadZone.classList.remove("drag-over"));
-uploadZone.addEventListener("drop", e => {
-  e.preventDefault();
-  uploadZone.classList.remove("drag-over");
-  const file = e.dataTransfer.files[0];
-  if (file) handleUpload(file);
-});
-fileInput.addEventListener("change", () => { if (fileInput.files[0]) handleUpload(fileInput.files[0]); });
-
-// ── Upload: client-side validation ────────────────────────────────
-function showToast(type, message) {
-  uploadToast.className = `toast visible ${type}`;
-  uploadToast.textContent = message;
-  if (type !== "error") setTimeout(() => uploadToast.classList.remove("visible"), 4000);
+async function ping(){
+  try{const r=await fetch(`${API}/documents/`); $('adot').className=r.ok?'adot':'adot err'; $('albl').textContent=r.ok?'API connected':'API error';}
+  catch{$('adot').className='adot err';$('albl').textContent='API offline';}
 }
 
-function clientValidate(file) {
-  if (!file.name.toLowerCase().endsWith(".pdf")) {
-    showToast("error", "Only PDF files are accepted.");
-    return false;
-  }
-  const maxBytes = 20 * 1024 * 1024;
-  if (file.size > maxBytes) {
-    showToast("error", `File is ${(file.size / 1024 / 1024).toFixed(1)} MB. Max is 20 MB.`);
-    return false;
-  }
-  return true;
+function switchTab(t){
+  ['chat','docs'].forEach(n=>{$('st-'+n).classList.toggle('on',n===t);$('sp-'+n).classList.toggle('on',n===t);});
 }
 
-async function handleUpload(file) {
-  if (!clientValidate(file)) return;
+/* upload */
+const uz=$('uz'),fi=$('fi');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('over');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('over'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('over');if(e.dataTransfer.files[0])doUpload(e.dataTransfer.files[0]);});
+fi.addEventListener('change',()=>{if(fi.files[0])doUpload(fi.files[0]);});
 
-  showToast("warn", `Uploading "${file.name}"...`);
-  progressWrap.classList.add("visible");
-  progressBar.style.width = "10%";
-  progressLabel.textContent = "Uploading...";
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    // Animate progress (fake progress until server responds)
-    let fakeProgress = 10;
-    const ticker = setInterval(() => {
-      fakeProgress = Math.min(fakeProgress + 8, 85);
-      progressBar.style.width = fakeProgress + "%";
-    }, 250);
-
-    const res = await fetch(`${API_BASE}/documents/upload/`, {
-      method: "POST",
-      body: formData,
-    });
-
-    clearInterval(ticker);
-    progressBar.style.width = "100%";
-    progressLabel.textContent = "Processing...";
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      const errMsg = data.errors?.file?.[0] || data.errors?.non_field_errors?.[0] || "Upload failed.";
-      showToast("error", errMsg);
-      progressWrap.classList.remove("visible");
-      return;
-    }
-
-    showToast("success", `"${data.document.title}" uploaded successfully.`);
-    progressLabel.textContent = "Done";
-
-    setTimeout(() => progressWrap.classList.remove("visible"), 1500);
-
-    // Add to local list and refresh
-    documents.unshift(data.document);
-    renderDocList();
-    setActiveDoc(data.document.id);
-
-  } catch (err) {
-    showToast("error", "Network error. Is the Django server running?");
-    progressWrap.classList.remove("visible");
-  }
-
-  fileInput.value = "";
+function toast(type,msg,el='utst'){
+  const t=$(el);t.className=`toast on ${type}`;t.textContent=msg;
+  if(type!=='err')setTimeout(()=>t.classList.remove('on'),4500);
 }
 
-// ── Document list ─────────────────────────────────────────────────
-async function loadDocuments() {
-  try {
-    const res  = await fetch(`${API_BASE}/documents/`);
-    const data = await res.json();
-    if (data.success) {
-      documents = data.results;
-      renderDocList();
-    }
-  } catch {}
+async function doUpload(file){
+  if(!file.name.toLowerCase().endsWith('.pdf')){toast('err','Only PDF files are accepted.');return;}
+  if(file.size>20*1024*1024){toast('err',`File is ${(file.size/1024/1024).toFixed(1)} MB — max 20 MB.`);return;}
+  toast('warn',`Uploading "${file.name}"…`);
+  $('pw').classList.add('on');
+  let p=10;
+  const tick=setInterval(()=>{p=Math.min(p+6,85);$('pf').style.width=p+'%';},280);
+  const fd=new FormData();fd.append('file',file);
+  try{
+    const res=await fetch(`${API}/documents/upload/`,{method:'POST',body:fd});
+    const d=await res.json();clearInterval(tick);$('pf').style.width='100%';
+    if(!res.ok){toast('err',d.errors?.file?.[0]||'Upload failed.');$('pw').classList.remove('on');return;}
+    toast('ok',`"${d.document.title}" uploaded — processing in background.`);
+    $('ptxt').textContent='Chunking & embedding…';
+    setTimeout(()=>$('pw').classList.remove('on'),2500);
+    await loadDocs();
+    selectDoc(d.document.id,d.document.title,d.document.chunk_count||0);
+  }catch(e){clearInterval(tick);toast('err','Network error — is Django running on :8000?');$('pw').classList.remove('on');}
+  fi.value='';
 }
-loadDocuments();
 
-function renderDocList() {
-  if (!documents.length) {
-    docList.innerHTML = '<div class="empty-docs">No documents yet.<br>Upload a PDF to get started.</div>';
-    return;
-  }
+/* docs */
+async function loadDocs(){
+  try{
+    const r=await fetch(`${API}/documents/`);const d=await r.json();if(!d.success)return;
+    docs=d.results||[];renderDocs();
+    const hasBusy=docs.some(d=>d.status==='processing'||d.status==='pending');
+    if(hasBusy&&!pollT){pollT=setInterval(async()=>{await loadDocs();if(!docs.some(d=>d.status==='processing'||d.status==='pending')){clearInterval(pollT);pollT=null;}},3500);}
+  }catch{}
+}
 
-  docList.innerHTML = documents.map(doc => `
-    <div class="doc-item ${doc.id === activeDocId ? "active" : ""}" onclick="setActiveDoc('${doc.id}')">
-      <div class="doc-icon">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
+function renderDocs(){
+  $('dcnt').textContent=docs.length?`${docs.length} file${docs.length!==1?'s':''}`:'';
+  if(!docs.length){$('dlist').innerHTML='<div class="empty">No documents yet.<br>Upload a PDF above.</div>';return;}
+  $('dlist').innerHTML=docs.map(d=>`
+    <div class="ditem${d.id===docId?' on':''}" id="d-${d.id}" onclick="selectDoc('${d.id}','${esc(d.title)}',${d.chunk_count})">
+      <div class="dtop">
+        <div class="dico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg></div>
+        <div class="dinf">
+          <div class="dname" title="${esc(d.title)}">${esc(d.title)}</div>
+          <div class="dmeta">
+            <span class="pill p-${d.status}">${d.status}</span>
+            <span class="dmt">${d.chunk_count} chunks · ${d.page_count} pages · ${d.file_size_kb} KB</span>
+          </div>
+        </div>
+        <div class="dact" onclick="event.stopPropagation()">
+          <button class="ddel" title="Delete" onclick="confirmDelDoc('${d.id}','${esc(d.title)}')">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
       </div>
-      <div class="doc-info">
-        <div class="doc-name" title="${doc.title}">${doc.title}</div>
-        <div class="doc-meta">${doc.file_size_kb} KB &middot; ${doc.chunk_count} chunks</div>
+      ${(d.status==='processing'||d.status==='pending')?'<div class="dprog on"><div class="dpfill"></div></div>':''}
+    </div>`).join('');
+}
+
+function selectDoc(id,title,chunks){
+  docId=id;docTitle=title;docChunks=chunks||0;
+  renderDocs();updateHeader();enableQ();
+  $('clrbtn').style.display='block';
+  switchTab('chat');
+}
+
+function updateHeader(){
+  if(!docId){$('chinfo').innerHTML='<div class="chph">Select a document from Library to start</div>';return;}
+  $('chinfo').innerHTML=`<div class="chdoc"><div class="chdico"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg></div><div><div class="chdname">${esc(docTitle)}</div><div class="chdmeta">${docChunks} chunks · RAG ready</div></div></div>`;
+}
+
+function confirmDelDoc(id,title){
+  confirm2('Delete document?',`"${title}" and all its chunks will be permanently removed. Conversations using this document will lose source context.`,async()=>{
+    try{
+      const r=await fetch(`${API}/documents/${id}/`,{method:'DELETE'});
+      const d=await r.json();
+      if(d.success){if(docId===id){docId=null;docTitle='';updateHeader();disableQ();$('clrbtn').style.display='none';}await loadDocs();toast('ok','Document deleted.','utst');}
+      else toast('err',d.error||'Delete failed.','utst');
+    }catch{toast('err','Delete request failed.','utst');}
+  });
+}
+
+/* sessions */
+async function loadSessions(){
+  try{const r=await fetch(`${API}/sessions/`);const d=await r.json();if(!d.success)return;sessions=d.sessions||[];renderSessions();}catch{}
+}
+
+function renderSessions(){
+  if(!sessions.length){$('slist').innerHTML='<div class="empty">No conversations yet.<br>Select a document and ask a question.</div>';return;}
+  $('slist').innerHTML=sessions.map(s=>`
+    <div class="sitem${s.id===sessId?' on':''}" onclick="loadSess('${s.id}')">
+      <div class="sico"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg></div>
+      <div class="sinf">
+        <div class="stitle">${esc(s.title||'Untitled conversation')}</div>
+        <div class="smeta">${s.message_count} msg · ${timeAgo(s.updated_at)}</div>
       </div>
-      <span class="doc-badge badge-${doc.status}">${doc.status}</span>
-    </div>
-  `).join("");
+      <button class="sdel" onclick="event.stopPropagation();confirmDelSess('${s.id}','${esc(s.title||'this conversation')}')">
+        <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>`).join('');
 }
 
-function setActiveDoc(docId) {
-  activeDocId = docId;
-  renderDocList();
-  // Enable chat
-  chatInput.disabled = false;
-  sendBtn.disabled   = false;
-  chatInput.placeholder = "Ask a question about this document...";
-  document.querySelector(".input-hint").textContent = "Press Enter to send · Shift+Enter for new line";
-  chatInput.focus();
-}
-
-// ── Chat: auto-resize textarea ────────────────────────────────────
-chatInput.addEventListener("input", () => {
-  chatInput.style.height = "auto";
-  chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
-});
-
-chatInput.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-sendBtn.addEventListener("click", sendMessage);
-
-// ── Chat: send & receive ──────────────────────────────────────────
-async function sendMessage() {
-  const text = chatInput.value.trim();
-  if (!text || isWaiting) return;
-
-  welcomeScreen.style.display = "none";
-  appendMessage("user", text);
-  chatInput.value = "";
-  chatInput.style.height = "auto";
-  setWaiting(true);
-
-  try {
-    // ── Phase 1: this is a placeholder — Phase 4 wires real RAG ──
-    // Replace this block with your actual /api/chat/ endpoint in Phase 4.
-    const payload = { question: text, document_id: activeDocId };
-    const res     = await fetch(`${API_BASE}/chat/`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      appendMessage("assistant", "Something went wrong. Please try again.", []);
-    } else {
-      appendMessage("assistant", data.answer || data.message, data.sources || []);
+async function loadSess(id){
+  sessId=id;renderSessions();clearMsgs();
+  try{
+    const r=await fetch(`${API}/sessions/${id}/`);const d=await r.json();if(!d.success)return;
+    for(const m of d.messages){
+      const srcs=(m.sources||[]).map((s,i)=>({n:i+1,text:s.text,page_start:s.page_start,page_end:s.page_end,doc_title:s.doc_title,doc_id:s.doc_id,chunk_index:0,retrieval_score:0,rerank_score:0,citation_label:`[Source ${i+1}]`}));
+      addMsg(m.role,m.content,srcs,[]);
     }
-
-  } catch {
-    // Graceful fallback while backend chat endpoint is not yet built
-    appendMessage(
-      "assistant",
-      "The chat API is not yet connected. " +
-      "This is the Phase 1 skeleton — wire up /api/chat/ in Phase 4 to get real RAG answers.",
-      []
-    );
-  } finally {
-    setWaiting(false);
-  }
+  }catch{}
 }
 
-// ── Chat: render messages ─────────────────────────────────────────
-function appendMessage(role, text, sources = []) {
-  const avatarText = role === "user" ? "You" : "AI";
+async function newConv(){sessId=null;clearMsgs();renderSessions();}
 
-  const sourcesHTML = sources.length ? `
-    <div class="msg-sources">
-      ${sources.map((s, i) =>
-        `<span class="source-chip" title="${s.title || ''}">Source ${i + 1}${s.page ? ` · p.${s.page}` : ""}</span>`
-      ).join("")}
-    </div>` : "";
-
-  const el = document.createElement("div");
-  el.className = `message ${role}`;
-  el.innerHTML = `
-    <div class="msg-avatar">${avatarText}</div>
-    <div class="msg-bubble">
-      ${escapeHtml(text)}
-      ${sourcesHTML}
-    </div>
-  `;
-
-  chatMessages.appendChild(el);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+function confirmDelSess(id,title){
+  confirm2('Delete conversation?',`"${title}" will be permanently deleted.`,async()=>{
+    await fetch(`${API}/sessions/${id}/`,{method:'DELETE'});
+    if(sessId===id){sessId=null;clearMsgs();}
+    await loadSessions();
+  });
 }
 
-function setWaiting(waiting) {
-  isWaiting       = waiting;
-  sendBtn.disabled = waiting;
-  typingEl.classList.toggle("visible", waiting);
-  if (!waiting) chatMessages.scrollTop = chatMessages.scrollHeight;
+/* input */
+function enableQ(){$('q').disabled=false;$('sbtn').disabled=false;$('q').placeholder=`Ask about "${docTitle}"…`;$('q').focus();}
+function disableQ(){$('q').disabled=true;$('sbtn').disabled=true;$('q').placeholder='Select a document from Library first...';}
+$('q').addEventListener('input',()=>{$('q').style.height='auto';$('q').style.height=Math.min($('q').scrollHeight,130)+'px';});
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+
+/* send via SSE */
+async function send(){
+  const text=$('q').value.trim();
+  if(!text||busy||!docId)return;
+  $('wlc').style.display='none';
+  addMsg('user',text);
+  $('q').value='';$('q').style.height='auto';
+  setBusy(true,'Re-ranking retrieved chunks…');
+  const{bubble,txtEl,cursor}=mkBubble();
+  try{
+    const res=await fetch(`${API}/chat/stream/`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:text,document_id:docId,session_id:sessId||undefined,top_k:5})});
+    if(!res.ok){const e=await res.json().catch(()=>({}));txtEl.textContent=`Error: ${e.error||'Request failed ('+res.status+')'}`;cursor.remove();setBusy(false);return;}
+    const reader=res.body.getReader(),dec=new TextDecoder();
+    let buf='',full='';
+    $('tlbl').textContent='Generating answer…';
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data: '))continue;
+        try{
+          const msg=JSON.parse(line.slice(6));
+          if(msg.type==='token'){full+=msg.text;txtEl.innerHTML=renderTxt(full);scrollB();}
+          if(msg.type==='done'){cursor.remove();sessId=msg.session_id;if(msg.sources?.length)attachCits(bubble,msg.sources,msg.citations_used||[]);await loadSessions();renderSessions();}
+          if(msg.type==='error'){txtEl.textContent=`Error: ${msg.message}`;cursor.remove();}
+        }catch{}
+      }
+    }
+  }catch(e){txtEl.textContent=`Connection error: ${e.message}`;cursor.remove();}
+  setBusy(false);
 }
 
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-    .replace(/\n/g, "<br>");
+function mkBubble(){
+  const el=document.createElement('div');el.className='msg assistant';
+  el.innerHTML=`<div class="mav">AI</div><div class="mbody"><div class="mbub"><span class="atxt"></span><span class="cur"></span></div></div>`;
+  $('msgs').appendChild(el);scrollB();
+  return{bubble:el.querySelector('.mbody'),txtEl:el.querySelector('.atxt'),cursor:el.querySelector('.cur')};
 }
+
+function addMsg(role,text,sources=[],cited=[]){
+  $('wlc').style.display='none';
+  const el=document.createElement('div');el.className=`msg ${role}`;
+  el.innerHTML=`<div class="mav">${role==='user'?'You':'AI'}</div><div class="mbody"><div class="mbub">${renderTxt(text)}</div></div>`;
+  $('msgs').appendChild(el);
+  if(role==='assistant'&&sources.length)attachCits(el.querySelector('.mbody'),sources,cited);
+  scrollB();
+}
+
+function renderTxt(t){
+  return esc(t).replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\[Source (\d+)\]/g,'<span class="src-tag" onclick="clickSrcTag(event,this,$1)">[S$1]</span>');
+}
+
+function clickSrcTag(e,el,n){
+  e.stopPropagation();
+  const body=el.closest('.mbody');
+  const chip=body?.querySelector(`.cchip[data-n="${n}"]`);
+  if(chip)chip.click();
+}
+
+function attachCits(body,sources,citedArr){
+  const cited=new Set(citedArr.map(c=>{const m=c.match(/\d+/);return m?parseInt(m[0]):null;}).filter(Boolean));
+  const citedCount=sources.filter(s=>cited.has(s.n)).length;
+  const panel=document.createElement('div');panel.className='cits';
+  panel.innerHTML=`<div class="chead"><span class="clbl">Sources</span><span class="ccnt">${citedCount} cited · ${sources.length} retrieved</span></div><div class="crows"></div>`;
+  const list=panel.querySelector('.crows');
+  sources.forEach(src=>{
+    const n=src.n||1,isCited=cited.has(n);
+    const pg=src.page_start===src.page_end?`p.${src.page_start}`:`p.${src.page_start}–${src.page_end}`;
+    const sc=src.rerank_score||src.retrieval_score||0;
+    const scCls=sc>=.8?'sh':sc>=.5?'sm':'sl';
+    const scPct=sc?`${(sc*100).toFixed(0)}%`:'';
+    const row=document.createElement('div');row.className='crow';
+    const chip=document.createElement('div');
+    chip.className=`cchip${isCited?'':' unc'}`;chip.dataset.n=n;
+    chip.innerHTML=`<div class="cn">${n}</div><div class="cdoc" title="${esc(src.doc_title||'')}">${esc(src.doc_title||'Document')}</div><div class="cpg">${pg}</div>${scPct?`<span class="cscore ${scCls}">${scPct}</span>`:''}<${isCited?'span class="citedbadge">CITED</span>':'span></span>'}<span class="cchev">▶</span>`;
+    const detail=document.createElement('div');detail.className='cdetail';
+    detail.innerHTML=`
+      <div class="cdmeta">
+        <span class="cdtitle">${esc(src.doc_title||'Document')}</span>
+        <span class="cdpg" onclick="openPage('${src.doc_id||''}',${src.page_start||1})"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>${pg}</span>
+      </div>
+      <div class="cdtext">${esc((src.text||'').slice(0,500))}${(src.text?.length||0)>500?'…':''}</div>
+      <div class="cdsc">
+        ${src.retrieval_score?`<div class="cdsi">Retrieval <span>${(src.retrieval_score*100).toFixed(0)}%</span></div>`:''}
+        ${src.rerank_score?`<div class="cdsi">Re-rank <span>${(src.rerank_score*100).toFixed(0)}%</span></div>`:''}
+        ${src.chunk_index!=null?`<div class="cdsi">Chunk <span>#${src.chunk_index}</span></div>`:''}
+      </div>`;
+    chip.addEventListener('click',()=>{
+      const isOpen=detail.classList.contains('on');
+      panel.querySelectorAll('.cdetail.on').forEach(d=>{d.classList.remove('on');d.previousSibling?.classList?.remove('open');});
+      body.querySelectorAll('.src-tag.lit').forEach(s=>s.classList.remove('lit'));
+      if(!isOpen){
+        detail.classList.add('on');chip.classList.add('open');
+        body.querySelectorAll(`.src-tag`).forEach(s=>{if(s.textContent===`[S${n}]`)s.classList.add('lit');});
+      }
+    });
+    row.appendChild(chip);row.appendChild(detail);list.appendChild(row);
+  });
+  body.appendChild(panel);scrollB();
+}
+
+async function openPage(docId,page){
+  if(!docId||!page)return;
+  try{const r=await fetch(`${API}/documents/${docId}/`);const d=await r.json();if(d.success&&d.document?.file)window.open(d.document.file+`#page=${page}`,'_blank');}catch{}
+}
+
+/* confirm */
+function confirm2(title,body,cb){
+  $('ct').textContent=title;$('cb').textContent=body;
+  $('ov').classList.add('on');
+  $('cok').onclick=()=>{closeOv();cb();};
+}
+function closeOv(){$('ov').classList.remove('on');}
+$('ov').addEventListener('click',e=>{if(e.target===$('ov'))closeOv();});
+
+/* misc */
+function clearChat(){clearMsgs();sessId=null;}
+function clearMsgs(){$('wlc').style.display='flex';$('msgs').querySelectorAll('.msg').forEach(m=>m.remove());}
+function setBusy(on,lbl){busy=on;$('sbtn').disabled=on;$('q').disabled=on;$('typ').classList.toggle('on',on);$('slive').classList.toggle('on',on);if(lbl)$('tlbl').textContent=lbl;}
+function scrollB(){$('msgs').scrollTop=$('msgs').scrollHeight;}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function timeAgo(iso){const s=(Date.now()-new Date(iso))/1000;if(s<60)return 'just now';if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;}
 </script>
 </body>
 </html>

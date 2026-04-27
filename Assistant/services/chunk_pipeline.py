@@ -48,7 +48,7 @@ def run_pipeline(document) -> str:
     """
     from django.utils import timezone
 
-    from .pdf_extractor import PDFExtractor
+    from .pdf_extractor import PDFExtractor, OCREngine
     from .chunking import (
         ChunkingService,
         FixedSizeChunker,
@@ -82,12 +82,45 @@ def run_pipeline(document) -> str:
         )
         result = extractor.extract()
 
+        # ── OCR retry: if pdfplumber got nothing, try OCR ─────────
+        # This handles scanned/image-only PDFs (lab reports, prescriptions).
         if not result.has_text:
-            raise ValueError(
-                "No text could be extracted from this PDF. "
-                "It may be a scanned image-only document. "
-                "Please run OCR before uploading."
-            )
+            if OCREngine.available():
+                logger.info(
+                    f"[Pipeline] pdfplumber found no text — retrying with OCR "
+                    f"(tesseract) for '{doc.title}'"
+                )
+                extractor_ocr = PDFExtractor(
+                    file_path      = doc.file.path,
+                    remove_headers = False,   # OCR output doesn't need header removal
+                    extract_tables = False,   # pdfplumber tables N/A for image pages
+                    force_ocr      = True,    # skip pdfplumber, go straight to tesseract
+                )
+                result = extractor_ocr.extract()
+            else:
+                logger.error(
+                    f"[Pipeline] No text in '{doc.title}' and OCR is not available. "
+                    f"Install: pip install pymupdf pytesseract pillow + tesseract binary."
+                )
+
+        # ── Final check after OCR attempt ─────────────────────────
+        if not result.has_text:
+            if OCREngine.available():
+                raise ValueError(
+                    "OCR ran but could not extract any text. "
+                    "The PDF may be too low quality or corrupted. "
+                    "Try scanning at higher resolution (300 DPI or above)."
+                )
+            else:
+                raise ValueError(
+                    "This PDF appears to be image-based (scanned) and OCR is not installed. "
+                    "Fix: pip install pymupdf pytesseract pillow, then install the tesseract "
+                    "binary from https://github.com/UB-Mannheim/tesseract/wiki (Windows) "
+                    "or: sudo apt install tesseract-ocr (Linux). "
+                    "Also add to settings.py: "
+                    "pytesseract.pytesseract.tesseract_cmd = "
+                    r"r'C:/Program Files/Tesseract-OCR/tesseract.exe'"
+                )
 
         # Persist page count now that we have it
         doc.page_count = result.page_count
@@ -96,6 +129,7 @@ def run_pipeline(document) -> str:
         logger.info(
             f"[Pipeline] Extracted {result.char_count:,} chars "
             f"from {result.page_count} pages"
+            f"{' (OCR)' if result.ocr_used else ''}"
         )
 
         # ── Step 2: Build chunker ─────────────────────────────────
@@ -206,8 +240,10 @@ def _build_chunker(document):
 
 def _to_annotated_pages(pages) -> list[dict]:
     """
+    
     Convert PageData objects (from PDFExtractor) into the annotated-page
     dict format expected by the chunker classes.
+
     """
     return [
         {
